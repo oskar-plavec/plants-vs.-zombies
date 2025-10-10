@@ -1,0 +1,133 @@
+//---------------------------------------------------------------------------
+
+#pragma hdrstop
+
+#include "tProjectile.h"
+#include "Unit1.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+
+using namespace std;
+
+__fastcall tProjectile::tProjectile(TComponent* Owner, tPlants* shooter) : TImage(Owner)
+{
+	this->Parent = (TWinControl*)Owner;
+	this->OnClick = OnProjectileClick;
+	this->originPlant = shooter;
+
+	if (!this->originPlant->getShooting()) {
+		throw Error("plant isn't a shooter");
+	}
+
+	else {
+		if (this->originPlant->getPlantType() == "Peashooter") {
+			this->Picture->LoadFromFile("pea.png");
+			this->Left = this->originPlant->Left + 36;
+			this->Top = this->originPlant->Top + 6;
+			this->Stretch = true;
+			this->Height = 20;
+			this->Width = 20;
+			this->Visible = true;
+			this->velocity = 10;
+			this->damage = this->originPlant->getAttackPower();
+		}
+
+        if (this->originPlant->getPlantType() == "Sunflower") {
+			this->Picture->LoadFromFile("sun.png");
+			this->Left = this->originPlant->Left + 7;
+			this->Top = this->originPlant->Top + 4;
+			this->Stretch = true;
+			this->Height = 50;
+			this->Width = 50;
+			this->Visible = true;
+			this->velocity = 10;
+			this->damage = this->originPlant->getAttackPower();
+		}
+
+	}
+}
+ tProjectile::~tProjectile()
+{
+
+}
+//------------------------------------------------------------------------------
+void tProjectile::moveProjectile(vector<tProjectile*> &projectile, int i)
+{
+	if (this->originPlant->getPlantType() != "Sunflower") {
+	   if (this->Left <= 1360) {
+		  this->Left += this->velocity;
+	   }
+	   else {
+		   projectile.erase(projectile.begin() + i);
+		   delete this;
+
+	   }
+	}
+}
+//------------------------------------------------------------------------------
+void __fastcall tProjectile::OnProjectileClick(TObject *Sender)
+{
+   if (this->originPlant->getPlantType() == "Sunflower") {
+		int targetX = 30;
+		int targetY = 30;
+
+        int deltaX = targetX - this->Left;
+        int deltaY = targetY - this->Top;
+        int distance = sqrt((deltaX * deltaX) + (deltaY * deltaY));
+
+		int stepsRemaining = distance / 25;
+		if (stepsRemaining <= 0) stepsRemaining = 1;
+
+		int stepX = deltaX / stepsRemaining;
+		int stepY = deltaY / stepsRemaining;
+
+		moveTimer = new TTimer(this);
+		moveTimer->Interval = 20;
+		moveTimer->OnTimer = OnMoveTimer;
+		Form1->removeProjectile(this->originPlant, this);
+		moveTimer->Enabled = true;
+
+        struct MoveData {
+			int stepX;
+            int stepY;
+            int stepsRemaining;
+		};
+		MoveData* moveData = new MoveData{ stepX, stepY, stepsRemaining };
+		moveTimer->Tag = (int)moveData;
+
+   }
+}
+void __fastcall tProjectile::OnMoveTimer(TObject *Sender)
+{
+    TTimer* timer = dynamic_cast<TTimer*>(Sender);
+    if (!timer) return;
+
+    MoveData* moveData = reinterpret_cast<MoveData*>(timer->Tag);
+    if (!moveData) return;
+
+    int stepX = moveData->stepX;
+    int stepY = moveData->stepY;
+    int& stepsRemaining = moveData->stepsRemaining;
+
+    if (stepsRemaining > 0) {
+        this->Left += stepX;
+        this->Top += stepY;
+        this->BringToFront();
+        stepsRemaining--;
+    } else {
+        timer->Enabled = false;
+        delete timer;
+        this->Visible = false;
+
+		Form1->changeSunCount(25);
+		//Form1->showMessage("projectile deleted");
+		delete this;
+        return;
+    }
+
+}
+int getDamage()
+{
+	return this->damage;
+}
+

@@ -1,0 +1,35 @@
+//---------------------------------------------------------------------------
+#ifndef tPlantsH
+#define tPlantsH
+#include "tZombie.h"
+//#include "Unit1.h"
+//---------------------------------------------------------------------------
+
+using namespace std;
+
+class tPlants : public TImage{
+	private:
+		String plantType;
+		int plantHp = 1;
+		int attackPower = 1;
+		int attackInterval = 1;
+		int cost = 25;
+		int cooldownTime = 1;
+		bool shooting = false;
+
+	public:
+		__fastcall tPlants(TComponent* Owner, String type, int top, int left);
+		void eatZombie(vector<tZombie*>& zombies, int i);
+		int getPlantHp();
+		int getAttackPower();
+		int getAttackInterval();
+		int getCost();
+		int getCooldownTime();
+		bool getShooting();
+        bool dealDamageToPlant(int damage);
+		String getPlantType();
+
+
+};
+
+#endif

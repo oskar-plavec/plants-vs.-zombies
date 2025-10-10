@@ -1,0 +1,13 @@
+//---------------------------------------------------------------------------
+
+#ifndef tErrorH
+#define tErrorH
+//---------------------------------------------------------------------------
+
+using namespace std;
+
+class Error : exception {
+    Error(string msg) : exception(msg){};
+};
+
+#endif

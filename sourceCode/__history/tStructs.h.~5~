@@ -1,0 +1,26 @@
+//---------------------------------------------------------------------------
+
+#ifndef tStructsH
+#define tStructsH
+
+//#include "tZombie.h"
+//---------------------------------------------------------------------------
+
+class tZombie;
+class tPlants;
+class tProjectile;
+//class TForm1;
+
+#include <Vcl.ExtCtrls.hpp>
+
+struct nZombie {
+    tZombie* zombie;
+    TTimer* biteTimer;
+};
+struct nPlant {
+		 tPlants* plant;
+		 vector<tProjectile*> projectile;
+		 TTimer* shotTimer;
+};
+
+#endif

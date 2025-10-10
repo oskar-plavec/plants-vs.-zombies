@@ -1,0 +1,19 @@
+//---------------------------------------------------------------------------
+
+#ifndef myErrorH
+#define myErrorH
+//---------------------------------------------------------------------------
+
+using namespace std;
+
+class tProjectile : public tImage {
+	private:
+		int velocity;
+		int damage;
+		TTimer* projectileTimer;
+		tPlants* originPlant;
+	public:
+        __fastcall tProjectile(TComponent* Owner, tPlants* shooter);
+};
+#endif
+

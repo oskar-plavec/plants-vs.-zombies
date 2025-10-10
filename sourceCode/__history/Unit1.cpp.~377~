@@ -1,0 +1,568 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#pragma hdrstop
+
+#include "Unit1.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TForm1 *Form1;
+//---------------------------------------------------------------------------
+__fastcall TForm1::TForm1(TComponent* Owner)	: TForm(Owner)
+{
+	Form1->DoubleBuffered = true;
+}
+void __fastcall TForm1::OnCreate(TObject *Sender)
+{
+	loadBackground("grassGrit.jpg");
+	int tempTop[] = {115, 213, 306, 404, 503, 605};
+	int tempLeft[] = {250, 345, 425, 503, 580, 668, 748, 825, 902, 990};
+
+	for (int i = 0; i < ROW+1; i++) {
+		topLimit[i] = tempTop[i];
+	}
+	for (int i = 0; i < COL+1; i++) {
+		leftLimit[i] = tempLeft[i];
+    }
+
+	nPlant emptyPlant;
+	emptyPlant.plant = nullptr;
+	emptyPlant.projectile.clear();
+	emptyPlant.shotTimer = nullptr;
+	for (int r = 0; r < ROW; r++) {
+		for (int c = 0; c < COL; c++) {
+			this->plantList[r][c] = emptyPlant;
+		}
+	}
+	srand(time(nullptr)); // for rand()
+}
+void __fastcall TForm1::OnDestroy(TObject *Sender)
+{
+  for (int i = 0; i < this->zombies.size(); i++) {
+	  delete this->zombies[i].zombie;
+	  this->zombies[i].biteTimer = nullptr;
+  }
+  this->zombies.clear();
+
+  for (int r = 0; r < ROW; r++) {
+	  for (int c = 0; c < COL; c++) {
+		  delete this->plantList[r][c].plant;
+		  for (int j = 0; j < this->plantList[r][c].projectile.size(); j++) {
+					 delete this->plantList[r][c].projectile[j];
+		  }
+          this->plantList[r][c].projectile.clear();
+		  this->plantList[r][c].shotTimer = nullptr;
+	  }
+  }
+}
+//---------------------------------------------------------------------------
+int TForm1::getSunCount()
+{
+	return this->sunCount;
+}
+void TForm1::changeSunCount(int i)
+{
+	this->sunCount += i;
+    SunCounterText->Caption = this->sunCount;
+}
+void __fastcall TForm1::SunDropClick(TObject *Sender)
+{
+	sunDropActive = false;
+
+    int targetX = 30;
+	int targetY = 30;
+	int deltaX = targetX - SunDrop->Left;
+	int deltaY = targetY - SunDrop->Top;
+	int distance = sqrt((deltaX * deltaX) + (deltaY * deltaY));
+
+	int stepsRemaining = distance / 25;
+	if (stepsRemaining <= 0) stepsRemaining = 1;
+
+	int stepX = deltaX / stepsRemaining;
+	int stepY = deltaY / stepsRemaining;
+
+	for (int i = 0; i < stepsRemaining; i++) {
+        SunDrop->Left += stepX;
+		SunDrop->Top += stepY;
+		SunDrop->BringToFront();
+        Application->ProcessMessages();
+		Sleep(15);
+	}
+
+		SunDrop->Visible = false;
+		changeSunCount(25);
+}
+void TForm1::dropSun()
+{
+	int minVal = leftLimit[0];
+	int maxVal = leftLimit[COL];
+
+	int randomLeft = minVal + (rand() % (maxVal - minVal + 1));
+
+	SunDrop->Top = 0;
+	SunDrop->Left = randomLeft;
+	SunDrop->Visible = true;
+	this->sunDropActive = true;
+}
+void TForm1::sunDropAnimation()
+{
+	if (this->sunDropActive) {
+		SunDrop->Top += 2;
+		SunDrop->BringToFront();
+		if (SunDrop->Top >= 650) {
+			this->sunDropActive = false;
+			SunDrop->Top = 0;
+			SunDrop->Visible = false;
+		}
+	}
+}
+void __fastcall TForm1::SunDropTimerTimer(TObject *Sender)
+{
+	dropSun();
+}
+//---------------------------------------------------------------------------
+void TForm1::loadBackground(String fileName)
+{
+		this->background->Left = 0;
+		this->background->Top = 0;
+		this->background->AutoSize = true;
+		this->background->Picture->LoadFromFile(fileName);
+		this->background->SendToBack();
+		this->background->Visible = true;
+		this->background->Stretch = true;
+}
+void TForm1::showMessage(String message)
+{
+   CustomMessage->Caption = message;
+   CustomMessage->Visible = true;
+   MessageTimer->Enabled = true;
+}
+void __fastcall TForm1::OnMessageTimer(TObject *Sender)
+{
+	CustomMessage->Visible = false;
+	MessageTimer->Enabled = false;
+}
+bool TForm1::checkColumnCursorPos(int x, int c, int &col, int &left)
+{
+	if (x >= this->leftLimit[c] && x <= this->leftLimit[c+1]) {
+		col = c;
+		left = this->leftLimit[c];
+		return true;
+	}
+	return false;
+}
+bool TForm1::checkCursorPos(int x, int y, int &row, int &col, int &top, int &left)
+{
+	bool result = false;
+	bool result2 = false;
+	for (int r = 0; r < ROW; r++) {
+		if (y >= this->topLimit[r] && y <= this->topLimit[r+1]) {
+			for (int c = 0; c < COL; c++) {
+				if (checkColumnCursorPos(x, c, col, left)) {
+					result2 = true;
+					break;
+                }
+			}
+			row = r;
+			top = this->topLimit[r] - 15;
+			if (result2) {
+			  result = true;
+			}
+			break;
+		}
+	}
+	return result;
+}
+//---------------------------------------------------------------------------
+void TForm1::createProjectile(nPlant &plantNode)
+{
+	if (plantNode.plant->getShooting()) {
+		if (plantNode.plant->getPlantType() != "Sunflower") {
+		  tProjectile* newProjectile = new tProjectile(this, plantNode.plant);
+		  plantNode.projectile.push_back(newProjectile);
+		}
+		else {
+			if (plantNode.projectile.size() == 0) {
+			  tProjectile* newProjectile = new tProjectile(this, plantNode.plant);
+			  plantNode.projectile.push_back(newProjectile);
+			}
+		}
+	}
+}
+void TForm1::shotAnimation()
+{
+	for (int r = 0; r < ROW; r++) {
+		for (int c = 0; c < COL; c++) {
+			 for (int i = 0; i < this->plantList[r][c].projectile.size(); i++) {
+				 this->plantList[r][c].projectile[i]->moveProjectile(this->plantList[r][c].projectile, i);
+			 }
+		}
+	}
+}
+void TForm1::removeProjectile(tPlants* originPlant, tProjectile* projectile)
+{
+  for (int r = 0; r < ROW; r++) {
+	  for (int c = 0; c < COL; c++) {
+		  if (this->plantList[r][c].plant == originPlant) {
+			  for (int i = 0; i < this->plantList[r][c].projectile.size(); i++) {
+				 if (this->plantList[r][c].projectile[i] == projectile) {
+					//showMessage("projectile removed");
+					this->plantList[r][c].projectile[i] = nullptr;
+					this->plantList[r][c].projectile.erase(this->plantList[r][c].projectile.begin() + i);
+				 }
+				 return;
+			  }
+		  }
+	  }
+  }
+}
+void __fastcall TForm1::shootProjectile(TObject *Sender)
+{
+	for (int r = 0; r < ROW; r++){
+	   for (int c = 0; c < COL; c++) {
+		 if (this->plantList[r][c].shotTimer == Sender){
+			createProjectile(this->plantList[r][c]);
+			return;
+		 }
+		 if (this->plantList[r][c].plant->getPlantType() == "Chomper") {
+			this->plantList[r][c].plant->Picture->LoadFromFile("chomper.png");
+			this->this->plantList[r][c].shotTimer->Enabled = false;
+		 }
+	   }
+	}
+}
+void __fastcall TForm1::OnAnimationTimer(TObject *Sender)
+{
+	shotAnimation();
+	sunDropAnimation();
+	for (int r = 0; r < ROW; r++) {
+		for (int c = 0; c < COL; c++) {
+		  if (this->plantList[r][c].plant != nullptr) {
+			if (this->plantList[r][c].plant->getShooting()) {
+				 if (checkForZombieInLane(this->plantList[r][c])) {
+					  this->plantList[r][c].shotTimer->Enabled = true;
+				 }
+				 else this->plantList[r][c].shotTimer->Enabled = false;
+			}
+		  }
+
+		  for (int i = 0; i < zombies.size(); i++) {
+			 if (this->plantList[r][c].plant != nullptr) {
+				 if (this->plantList[r][c].plant->getPlantType() == "Chomper") {
+					if (checkForZombie(this->zombies[i].zombie, r, c)) {
+					   this->plantList[r][c].plant->eatZombie(this->zombies, i, this->plantList[r][c]);
+					}
+				 }
+			 }
+			 for (int j = 0; j < this->plantList[r][c].projectile.size(); j++) {
+				 if (this->checkForHit(this->zombies[i].zombie, this->plantList[r][c].projectile[j])) {
+					this->zombies[i].zombie->dealDamageToZombie(this->zombies, this->plantList[r][c].projectile, this->plantList[r][c].projectile[j], i, j, this->plantList[r][c].projectile[j]->getDamage());
+				 }
+			 }
+			 if (this->plantList[r][c].plant != nullptr) {
+				 if (checkForPlant(this->zombies[i].zombie, r, c)) {
+					this->zombies[i].biteTimer->Enabled = true;
+					this->zombies[i].rContact = r;
+					this->zombies[i].cContact = c;
+				 }
+			 }
+		  }
+		}
+	}
+
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::backgroundClick(TObject *Sender)
+{
+	int top = 0;
+	int left = 0;
+	int row = 0;
+	int col = 0;
+
+	int x = Mouse->CursorPos.x - (this->Left);
+	int y = Mouse->CursorPos.y - (this->Top);
+
+	//ShowMessage(IntToStr(y) + ", " + IntToStr(x));
+	if (this->plantType != '\0') {
+
+	   if ( this->checkCursorPos(x, y, row, col, top, left) ) {
+		  if (this->plantList[row][col].plant == nullptr) {
+			tPlants* newPlant = new tPlants(this, this->plantType, top, left);
+			nPlant nodePlant;
+			nodePlant.plant = newPlant;
+
+			nodePlant.shotTimer = new TTimer(this);
+			nodePlant.shotTimer->Interval = nodePlant.plant->getAttackInterval();
+			nodePlant.shotTimer->OnTimer = shootProjectile;
+			nodePlant.shotTimer->Enabled = false;
+
+			this->plantList[row][col] = nodePlant;
+			changeSunCount(nodePlant.plant->getCost()*-1);
+			//this->plantType = '\0';
+		  }
+		  else showMessage("You can't plant there");
+	   }
+	   else showMessage("You can't plant there");
+	}
+}
+void __fastcall TForm1::PeashooterClick(TObject *Sender)
+{
+   /*if (this->sunCount >= 100) {
+	  this->plantType = "Peashooter";
+   }
+   else showMessage("you need more suns");*/
+
+   this->plantType = "Peashooter";
+}
+void __fastcall TForm1::SunflowerClick(TObject *Sender)
+{
+   /*if (this->sunCount >= 50) {
+	  this->plantType = "Sunflower";
+   }
+   else showMessage("you need more suns");*/
+
+   this->plantType = "Sunflower";
+}
+void __fastcall TForm1::WallnutClick(TObject *Sender)
+{
+   /*if (this->sunCount >= 50) {
+	  this->plantType = "Wallnut";
+   }
+   else showMessage("you need more suns");*/
+
+   this->plantType = "Wallnut";
+}
+void __fastcall TForm1::ChomperClick(TObject *Sender)
+{
+   /*if (this->sunCount >= +50) {
+	  this->plantType = "Chomper";
+   }
+   else showMessage("you need more suns");*/
+
+   this->plantType = "Chomper";
+}
+//-------------------------------------------------------------------------
+void __fastcall TForm1::bitePlant(TObject *Sender)
+{
+	int r, c;
+	for (int i = 0; i < this->zombies.size(); i++) {
+		r = this->zombies[i].rContact;
+		c = this->zombies[i].cContact;
+		if (this->zombies[i].biteTimer == Sender) {
+		  if (this->plantList[r][c].plant != nullptr) {
+			if (!this->plantList[r][c].plant->dealDamageToPlant(this->zombies[i].zombie->getAttackPower()) ) {
+				this->plantList[r][c].shotTimer->Enabled = false;
+				this->plantList[r][c].plant = nullptr;
+				for (int j = 0; j < this->plantList[r][c].projectile.size(); j++) {
+					 delete this->plantList[r][c].projectile[j];
+				}
+				this->plantList[r][c].projectile.clear();
+				this->plantList[r][c].shotTimer = nullptr;
+				delete this->plantList[r][c].shotTimer;
+				this->zombies[i].biteTimer->Enabled = false;
+
+				//this->zombies[i].zombie->Picture->LoadFromFile("normalZombie.png");
+			}
+			//else this->zombies[i].zombie->Picture->LoadFromFile("eatingZombie.png");
+		  }
+		  else  this->zombies[i].biteTimer->Enabled = false;
+		}
+	}
+}
+void __fastcall TForm1::ZombieSpawnTimerTimer(TObject *Sender)
+{
+	 int minVal = topLimit[0];
+	 int maxVal = topLimit[ROW];
+
+	 int randomTop = minVal + (rand() % (maxVal - minVal + 1));
+
+	 int row = 0;
+	 for (int r = 0; r < ROW; r++) {
+		if (randomTop >= this->topLimit[r] && randomTop <= this->topLimit[r+1]) {
+			randomTop = this->topLimit[r] - 40;
+			row = r;
+			break;
+		}
+	 }
+	 String zombieType = "Normal";
+	 if (this->zombiesTotal >= 4 && this->zombiesTotal < 15) {
+		 int randNum = (rand() % 3) + 1;
+		 switch (randNum) {
+			 case 1: zombieType = "Normal";
+					 break;
+			 case 2: zombieType = "Cone";
+					 break;
+             case 3: zombieType = "Normal";
+					 break;
+         default:
+			 zombieType = "Normal";
+		 }
+	 }
+	 if (this->zombiesTotal >= 15) {
+		 int randNum = (rand() % 3) + 1;
+		 switch (randNum) {
+			 case 1: zombieType = "Normal";
+					 break;
+			 case 2: zombieType = "Cone";
+					 break;
+			 case 3: zombieType = "Bucket";
+					 break;
+         default:
+			 zombieType = "Normal";
+		 }
+	 }
+
+	 tZombie* newZombie = new tZombie(this, zombieType, randomTop);
+	 nZombie newNZombie;
+	 newNZombie.zombie = newZombie;
+	 newNZombie.biteTimer = new TTimer(this);
+	 newNZombie.biteTimer->Interval = newNZombie.zombie->getAttackInterval();
+	 newNZombie.biteTimer->OnTimer = bitePlant;
+	 newNZombie.biteTimer->Enabled = false;
+	 this->zombies.push_back(newNZombie);
+	 this->zombiesTotal++;
+
+     //1.3^(x-10)+2
+
+	 if (this->minTime < this->maxTime && 10000-(this->zombiesTotal*400) > 400) {
+		 this->minTime = 10000-(this->zombiesTotal*400);
+		 this->maxTime = 20000-(this->zombiesTotal*700);
+	 }
+	 else {
+		 if (10000-(this->zombiesTotal*400) > 300) {
+			this->minTime = 10000-(this->zombiesTotal*400);
+			this->maxTime = 15000-(this->zombiesTotal*400);
+         }
+		 else {
+			this->minTime = 500;
+			this->maxTime = 1500;
+		 }
+	 }
+
+     int randomTime = this->minTime + (rand() % (this->maxTime - this->minTime + 1));
+
+	 ZombieSpawnTimer->Interval = randomTime;
+
+}
+void __fastcall TForm1::ZombieAnimationTimerTimer(TObject *Sender)
+{
+	for (int i = 0; i < zombies.size(); i++) {
+	  if (zombies[i].biteTimer->Enabled == false) {
+		zombies[i].zombie->moveZombie(this->zombies, i);
+	  }
+	}
+}
+//---------------------------------------------------------------------------
+bool TForm1::checkForHit(tZombie* zombie, tProjectile* projectile)
+{
+	int zomLeft = zombie->Left+40;
+	int zomTop = zombie->Top+40;
+	int proLeft = projectile->Left+20;
+	int proTop = projectile->Top+20;
+
+	int rowZom = 0;
+	int rowPro = 0;
+
+	for (int i = 0; i < ROW; i++) {
+		if (zomTop >= this->topLimit[i] && zomTop <= this->topLimit[i+1]) {
+			rowZom = i;
+		}
+		if (proTop >= this->topLimit[i] && proTop <= this->topLimit[i+1]) {
+			rowPro = i;
+		}
+	}
+
+	int tolerance = 7;
+
+	if (rowZom == rowPro) {
+		if (zomLeft > proLeft-tolerance && zomLeft < proLeft+tolerance) {
+			//showMessage("hit");
+			return true;
+		}
+		else return false;
+	}
+	else return false;
+}
+bool TForm1::checkForZombieInLane(nPlant &plantNode)
+{
+	if (plantNode.plant->getPlantType() == "Sunflower") {
+        return true;
+	}
+	int plantLeft = plantNode.plant->Left;
+	int plantTop = plantNode.plant->Top+50;
+
+	int rowPla = 0;
+	for (int r = 0; r < ROW; r++) {
+        if (plantTop >= this->topLimit[r] && plantTop <= this->topLimit[r+1]) {
+			rowPla = r;
+		}
+	}
+
+	int zomTop;
+	int rowZom = -1;
+	for (int i = 0; i < this->zombies.size(); i++) {
+		zomTop = this->zombies[i].zombie->Top+50;
+		for (int r = 0; r < ROW; r++) {
+			if (zomTop >= this->topLimit[r] && zomTop <= this->topLimit[r+1]) {
+				rowZom = r;
+			}
+			if (rowZom == rowPla && this->zombies[i].zombie->Left >= plantLeft) {
+			   return true;
+			}
+		}
+	}
+	return false;
+}
+bool TForm1::checkForPlant(tZombie* zombie, int rowPla, int colPla)
+{
+	int zomLeft = zombie->Left+20;
+	int zomTop = zombie->Top+45;
+
+	int rowZom = -1;
+	int colZom = -1;
+
+	for (int i = 0; i < ROW; i++) {
+		if (zomTop >= this->topLimit[i] && zomTop <= this->topLimit[i+1]) {
+			for (int j = 0; j < COL; j++) {
+			   if (zomLeft >= this->leftLimit[j] && zomLeft <= this->leftLimit[j+1]) {
+				  colZom = j;
+			   }
+			}
+			rowZom = i;
+		}
+	}
+
+	if (rowZom == rowPla && colZom == colPla) {
+	   return true;
+	}
+	else return false;
+}
+bool TForm1::checkForZombie(tZombie* zombie, int rowPla, int colPla)
+{
+	int zomLeft = zombie->Left+20;
+	int zomTop = zombie->Top+45;
+
+	int rowZom = -1;
+	int colZom = -1;
+
+	for (int i = 0; i < ROW; i++) {
+		if (zomTop >= this->topLimit[i] && zomTop <= this->topLimit[i+1]) {
+			for (int j = 0; j < COL; j++) {
+			   if (zomLeft >= this->leftLimit[j] && zomLeft <= this->leftLimit[j+1]) {
+				  colZom = j;
+			   }
+			}
+			rowZom = i;
+		}
+	}
+
+	if (rowZom == rowPla && colZom == colPla) {
+	   return true;
+	}
+	else return false;
+}
+//---------------------------------------------------------------------------

@@ -1,0 +1,96 @@
+//---------------------------------------------------------------------------
+
+#ifndef Unit1H
+#define Unit1H
+//---------------------------------------------------------------------------
+#include <System.Classes.hpp>
+#include <Vcl.Controls.hpp>
+#include <Vcl.StdCtrls.hpp>
+#include <Vcl.Imaging.jpeg.hpp>
+#include <Vcl.Forms.hpp>
+#include <Vcl.ExtCtrls.hpp>
+#include <Vcl.Imaging.pngimage.hpp>
+#include <vector>
+
+#include "tPlants.h"
+#include "tProjectile.h"
+#include "tZombie.h"
+#include "tStructs.h"
+
+using namespace std;
+//---------------------------------------------------------------------------
+const int ROW = 5;
+const int COL = 9;
+class TForm1 : public TForm
+{
+__published:	// IDE-managed Components
+	TTimer *AnimationTimer;
+	TImage *background;
+	TImage *Peashooter;
+	TImage *Sunflower;
+	TImage *SunCounterBackground;
+	TLabel *SunCounterText;
+	TLabel *CustomMessage;
+	TTimer *MessageTimer;
+	TImage *SunDrop;
+	TTimer *SunDropTimer;
+	TTimer *ZombieSpawnTimer;
+	TTimer *ZombieAnimationTimer;
+	void __fastcall OnCreate(TObject *Sender);
+	void __fastcall backgroundClick(TObject *Sender);
+	void __fastcall PeashooterClick(TObject *Sender);
+	void __fastcall SunflowerClick(TObject *Sender);
+	void __fastcall OnAnimationTimer(TObject *Sender);
+	void __fastcall OnMessageTimer(TObject *Sender);
+	void __fastcall SunDropClick(TObject *Sender);
+	void __fastcall SunDropTimerTimer(TObject *Sender);
+	void __fastcall ZombieSpawnTimerTimer(TObject *Sender);
+	void __fastcall ZombieAnimationTimerTimer(TObject *Sender);
+private:
+    int topLimit[ROW+1];
+	int leftLimit[COL+1];
+	//-----------------------------------
+	int sunCount = 50;
+	bool sunDropActive = false;
+	//-----------------------------------
+	/*struct nZombie {
+		 tZombie* zombie;
+         TTimer* biteTimer;
+	};*/
+    int minTime = 10000;
+	int maxTime = 20000;
+	vector<nZombie> zombies;
+    void __fastcall bitePlant(TObject *Sender);
+	//-----------------------------------
+	String plantType = '\0';
+	/*struct nPlant {
+		 tPlants* plant;
+		 vector<tProjectile*> projectile;
+		 TTimer* shotTimer;
+	}; */
+	nPlant plantList[ROW][COL];
+	//------------------------------------
+	void __fastcall shootProjectile(TObject *Sender);
+public:		// User declarations
+	__fastcall TForm1(TComponent* Owner);
+	void createProjectile(nPlant &plantNode);
+	void shotAnimation();
+	void removeProjectile(tPlants* originPlant, tProjectile* projectile);
+	//--------------------------------------------------------------------------
+	void loadBackground(String fileName);
+    void showMessage(String message);
+	bool checkColumnCursorPos(int x, int c, int &col, int &left);
+	bool checkCursorPos(int x, int y, int &row, int &col, int &top, int &left);
+	//--------------------------------------------------------------------------
+	int getSunCount();
+	void changeSunCount(int i);
+	void dropSun();
+	void sunDropAnimation();
+	//--------------------------------------------------------------------------
+	bool checkForHit(tZombie* zombie, tProjectile* projectile);
+    bool checkForPlant(tZombie* zombie, int  rowPla, int colPla);
+};
+//---------------------------------------------------------------------------
+extern PACKAGE TForm1 *Form1;
+//---------------------------------------------------------------------------
+#endif

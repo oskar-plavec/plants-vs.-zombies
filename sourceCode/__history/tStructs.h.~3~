@@ -1,0 +1,15 @@
+//---------------------------------------------------------------------------
+
+#ifndef tStructsH
+#define tStructsH
+
+#include "tZombie.h"
+//---------------------------------------------------------------------------
+
+
+struct nZombie {
+    tZombie* zombie;
+    TTimer* biteTimer;
+};
+
+#endif

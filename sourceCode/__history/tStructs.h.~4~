@@ -1,0 +1,18 @@
+//---------------------------------------------------------------------------
+
+#ifndef tStructsH
+#define tStructsH
+
+//#include "tZombie.h"
+//---------------------------------------------------------------------------
+
+class tZombie; // Forward declaration
+
+#include <Vcl.ExtCtrls.hpp>
+
+struct nZombie {
+    tZombie* zombie;
+    TTimer* biteTimer;
+};
+
+#endif

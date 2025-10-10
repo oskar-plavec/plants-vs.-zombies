@@ -1,0 +1,118 @@
+//---------------------------------------------------------------------------
+
+#pragma hdrstop
+
+#include "tPlants.h"
+#include "Unit1.h"
+//#include "tZombie.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+
+using namespace std;
+
+__fastcall tPlants::tPlants(TComponent* Owner, String type, int top, int left) : TImage(Owner)
+{
+	this->Parent = (TWinControl*)Owner;
+	this->plantType = type;
+
+	this->Top = top;
+	this->Left = left;
+
+	if (type == "Peashooter") {
+		this->Picture->LoadFromFile("peashooter.png");
+		this->plantHp = 300;
+		this->cost = 100;
+		this->cooldownTime = 7500;
+		this->attackPower = 20;
+		//this->attackInterval = 1500;
+		this->attackInterval = 150;
+		this->shooting = true;
+
+	}
+	else if (type == "Sunflower") {
+		this->Picture->LoadFromFile("sunflower.png");
+		this->plantHp = 300;
+		this->cost = 50;
+		this->shooting = true;
+		this->cooldownTime = 7500;
+		this->attackPower = 0;
+		//this->attackInterval = 24000;
+		this->attackInterval = 15000;
+	}
+	else if (type == "Wallnut") {
+		this->Picture->LoadFromFile("wallnut.png");
+		this->plantHp = 3600;
+		this->cost = 50;
+		this->shooting = false;
+		this->cooldownTime = 50000;
+		this->attackPower = 0;
+		//this->attackInterval = 10000;
+	}
+	else if (type == "Chomper") {
+		this->Picture->LoadFromFile("chomper.png");
+		this->plantHp = 300;
+		this->cost = 150;
+		this->shooting = false;
+		this->cooldownTime = 7500;
+		this->attackPower = 1800;
+		this->attackInterval = 15000;
+	}
+
+    this->Width = 60;
+    this->Height = 70;
+	this->Visible = true;
+    this->Stretch = true;
+	this->BringToFront();
+}
+//------------------------------------------------------------------------------
+void tPlants::eatZombie(nPlant &plant)
+{
+	 if (this->plantType == "Chomper") {
+		this->Picture->LoadFromFile("chomperEating.png");
+		plant.shotTimer->Enabled = true;
+	 }
+	 else throw Error("plant is not a chomper");
+}
+void tPlants::changePicture(String fileName)
+{
+	this->Picture->LoadFromFile(fileName);
+}
+//------------------------------------------------------------------------------
+int tPlants::getPlantHp()
+{	return this->plantHp;}
+int tPlants::getAttackPower()
+{	return this->attackPower;}
+int tPlants::getAttackInterval()
+{	return this->attackInterval;}
+int tPlants::getCost()
+{	return this->cost;}
+int tPlants::getCooldownTime()
+{	return this->cost;}
+//------------------------------------------------------------------------------
+bool tPlants::getShooting()
+{	return this->shooting;	}
+bool tPlants::dealDamageToPlant(int damage)
+{
+  if (this->plantHp > 0) {
+	if (damage > 0) {
+		this->plantHp -= damage;
+
+		if (this->plantType == "Wallnut" && this->plantHp <= 1800 &&  this->plantHp >= 1600) {
+		   this->Picture->LoadFromFile("damagedWallnut.png");
+           this->Width = 65;
+		}
+
+		if (this->plantHp == 0) {
+           this->Visible = false;
+		   delete this;
+		   return false;
+		}
+		else return true;
+	}
+	else return true;
+  }
+  else return false;
+}
+//------------------------------------------------------------------------------
+String tPlants::getPlantType()
+{	return this->plantType;}
