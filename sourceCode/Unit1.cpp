@@ -316,39 +316,39 @@ void __fastcall TForm1::backgroundClick(TObject *Sender)
 }
 void __fastcall TForm1::PeashooterClick(TObject *Sender)
 {
-   /*if (this->sunCount >= 100) {
+   if (this->sunCount >= 100) {
 	  this->plantType = "Peashooter";
    }
-   else showMessage("you need more suns");*/
+   else showMessage("you need more suns");
 
-   this->plantType = "Peashooter";
+   //this->plantType = "Peashooter";
 }
 void __fastcall TForm1::SunflowerClick(TObject *Sender)
 {
-   /*if (this->sunCount >= 50) {
+   if (this->sunCount >= 50) {
 	  this->plantType = "Sunflower";
    }
-   else showMessage("you need more suns");*/
+   else showMessage("you need more suns");
 
-   this->plantType = "Sunflower";
+   //this->plantType = "Sunflower";
 }
 void __fastcall TForm1::WallnutClick(TObject *Sender)
 {
-   /*if (this->sunCount >= 50) {
+   if (this->sunCount >= 50) {
 	  this->plantType = "Wallnut";
    }
-   else showMessage("you need more suns");*/
+   else showMessage("you need more suns");
 
-   this->plantType = "Wallnut";
+   //this->plantType = "Wallnut";
 }
 void __fastcall TForm1::ChomperClick(TObject *Sender)
 {
-   /*if (this->sunCount >= +50) {
+   if (this->sunCount >= +50) {
 	  this->plantType = "Chomper";
    }
-   else showMessage("you need more suns");*/
+   else showMessage("you need more suns");
 
-   this->plantType = "Chomper";
+   //this->plantType = "Chomper";
 }
 //-------------------------------------------------------------------------
 void __fastcall TForm1::bitePlant(TObject *Sender)
