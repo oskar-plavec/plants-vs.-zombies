@@ -1,2 +1,0 @@
-Plants vs Zombies clone
-It's a simple clone of the game Plants vs Zombies. It was writen in C++ using VCL/Rad Studio (.cbproj project files). There is only one level, 4 plants and 3 types of zombies. Majority of the objets I used use VCL TImage as a base then add some properties on top of it. Most of the "game logic" happens in the Unit1.cpp file. The rest are either my classes or files created by RAD Studio for the app to work.
